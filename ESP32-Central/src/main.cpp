@@ -1,23 +1,12 @@
-/******************************************************************************
-MQTT_Light_Example.ino
-Example for controlling a light using MQTT
-by: Alex Wende, SparkFun Electronics
-
-This sketch connects the ESP8266 to a MQTT broker and subcribes to the topic
-room/light. When "on" is recieved, the pin LIGHT_PIN is toggled HIGH.
-When "off" is recieved, the pin LIGHT_PIN is toggled LOW.
-******************************************************************************/
-
 #include <WiFi.h>
 #include <PubSubClient.h>
 
-const char *ssid = "Nicolodi2";     // name of your WiFi network
-const char *password = "fehe14699"; // password of the WiFi network
+const char *ssid = "Nicolodi2";     // Nome WiFi
+const char *password = "fehe14699"; // Senha WiFi
 
-const byte SWITCH_PIN = 0;       // Pin to control the light with
-const char *ID = "Formulautfpr"; // Name of our device, must be unique
+const char *ID = "UTFPR-Balanca"; // Name of our device, must be unique
 
-const char *BROKER_MQTT = "broker.mqtt-dashboard.com"; //URL do broker MQTT que se deseja utilizar
+const char *BROKER_MQTT = "broker.mqtt-dashboard.com"; // URL do broker MQTT que se deseja utilizar
 int BROKER_PORT = 1883;
 
 const char *TOPIC = "led/estado";          // Topico INSCRIÇÃO led
