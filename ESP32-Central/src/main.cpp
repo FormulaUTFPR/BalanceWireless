@@ -1,25 +1,39 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
+#include <HX711_ADC.h>
 
-const char *ssid = "Nicolodi2";     // Nome WiFi
-const char *password = "fehe14699"; // Senha WiFi
+const char *ssid = "minharede";     // Nome WiFi
+const char *password = "minhasenha"; // Senha WiFi
 
-const char *ID = "UTFPR-Balanca"; // Name of our device, must be unique
+const char *ID = "UTFPR-Balanca"; // Nome do dispositivo (deve ser único na rede)
 
 const char *BROKER_MQTT = "broker.mqtt-dashboard.com"; // URL do broker MQTT que se deseja utilizar
 int BROKER_PORT = 1883;
 
-const char *TOPIC = "led/estado";          // Topico INSCRIÇÃO led
+const char *TOPIC = "tara/estado";          // Topico INSCRIÇÃO tara
 const char *STATE_TOPIC = "caster/angulo"; // Topico PUBLICAR caster
+
+const char *char0 = "0";
+const char *char1 = "1";
 
 unsigned int casterAngle = 0;
 
+unsigned long stabilizingtime = 2000; // Tempo para estabilizar
+boolean _tare = true; // Se quiser tarar depois de inicializar, deixar verdadeiro, se não, falso
+
 #define LED_BUILTIN 22
 #define CASTER_POT 32
+#define HX711_dout 4 //mcu > HX711 pino dout
+#define HX711_sck 5 //mcu > HX711 pino sck
 
 WiFiClient wclient;
 
 PubSubClient client(wclient); // Setup MQTT client
+HX711_ADC LoadCell(HX711_dout, HX711_sck); // Setup HX711
+
+// Cabecalhos
+void setupHX711();
+void getWeight();
 
 // TRATAMENTO DE MENSAGENS QUE CHEGAM
 void callback(char *topic, byte *payload, unsigned int length)
@@ -34,17 +48,16 @@ void callback(char *topic, byte *payload, unsigned int length)
   Serial.print(topic);
   Serial.print("] ");
   Serial.println(response);
-  if (response == "1") // LIGA O LED
-  {
-    digitalWrite(LED_BUILTIN, HIGH);
-    Serial.print(topic);
-    Serial.println(": LIGADO");
+  
+  // Tarar a balanca
+  if (response == char1) {
+    LoadCell.tareNoDelay();
+    Serial.println("Aaaaaa");
   }
-  else if (response == "0") // DESLIGA O LED
-  {
-    digitalWrite(LED_BUILTIN, LOW);
-    Serial.print(topic);
-    Serial.println(": DESLIGADO");
+
+  // Checar se está tarada
+  if (LoadCell.getTareStatus() == true) {
+    client.publish("tara/estado", char0);
   }
 }
 
@@ -98,7 +111,7 @@ void reconnect()
     if (client.connect(ID))
     {
       client.subscribe(TOPIC);
-      Serial.println("Conectado");
+      Serial.println("Conectado ");
       Serial.print("Incrito em: ");
       Serial.println(TOPIC);
       Serial.println('\n');
@@ -121,6 +134,9 @@ void setup()
   setup_wifi(); // Conecta na rede
   client.setServer(BROKER_MQTT, BROKER_PORT);
   client.setCallback(callback); // Inicializa a subrotina de callback
+
+  setupHX711();
+  Serial.println("Terminou o setup");
 }
 
 void loop()
@@ -131,4 +147,43 @@ void loop()
   }
   client.loop();
   caster();
+  getWeight();
+}
+
+void setupHX711(){
+  
+    LoadCell.begin();
+    float calibrationValue = 696.0; // Valor de calibração
+  
+    LoadCell.start(stabilizingtime, _tare);
+    if (LoadCell.getTareTimeoutFlag()) {
+      while (1);
+    }
+    else {
+      LoadCell.setCalFactor(calibrationValue); // set calibration value (float)
+      Serial.println("Startup is complete");
+    }
+ }
+
+ void getWeight(){
+  static boolean newDataReady = 0;
+
+  if (LoadCell.update()) newDataReady = true; // Checar se tem atualização de peso
+
+  if (newDataReady) {
+      float i = LoadCell.getData();
+      Serial.println("Peso: ");
+      Serial.println(i);
+  }
+/*
+  // Tarar a balanca
+  if (Serial.available() > 0) {
+    LoadCell.tareNoDelay();
+  }
+
+  // Checar se está tarada
+  if (LoadCell.getTareStatus() == true) {
+    
+  }
+  */
 }
